@@ -3,10 +3,12 @@ const app = express();
 const cors = require("cors");
 app.use(cors());
 const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
+// use if local
 // const mongo = new MongoClient("mongodb://127.0.0.1");
 // const db = mongo.db("myan_dev");
 const bcrypt = require("bcrypt");
 
+// use if created a cluster account
 //Mongo Atlas (Mongo Cluster)
 const uri =
   "mongodb+srv://myan_dev:thebesthacker@cluster0.gzjwno9.mongodb.net/?retryWrites=true&w=majority";
@@ -67,6 +69,7 @@ const upload = multer({
   storage: storage,
 });
 
+// authentication with token (need to add later in all apis)
 function auth(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
@@ -86,6 +89,7 @@ function auth(req, res, next) {
   }
 }
 
+//register
 app.post("/register", async (req, res) => {
   const { name, email, password, created_at } = req.body;
   const hashPassword = await bcrypt.hash(password, 10);
@@ -111,6 +115,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
+//login
 app.post("/login", async (req, res) => {
   await client.connect();
   const { email, password } = req.body;
@@ -149,6 +154,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
+//get credentials
 app.get("/get/credentials", async (req, res) => {
   const token = req.headers.authorization;
   try {
@@ -175,6 +181,7 @@ app.get("/get/credentials", async (req, res) => {
   }
 });
 
+//create topic
 app.post("/create/topic", async (req, res) => {
   const { userId, topic: topicName, created_at } = req.body;
   try {
@@ -191,6 +198,7 @@ app.post("/create/topic", async (req, res) => {
   }
 });
 
+//get all topics
 app.get("/get/topics", async (req, res) => {
   try {
     await client.connect();
@@ -214,6 +222,7 @@ app.get("/get/topics", async (req, res) => {
   }
 });
 
+//update topic
 app.put("/update/topic", async (req, res) => {
   const { topicId, userId, topic: topicName, updated_at } = req.body;
   const oldTopic = await client
@@ -248,6 +257,7 @@ app.put("/update/topic", async (req, res) => {
   }
 });
 
+// delete topic
 app.delete("/delete/topic", async (req, res) => {
   await client.connect();
   const { topicId } = req.body;
