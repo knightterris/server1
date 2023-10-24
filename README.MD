@@ -2,9 +2,9 @@
 
 ### Requirements
 
-- [ ] Node
+- [x] Node
 
-- [ ] MongoDB
+- [x] MongoDB
 
 ## Installation and Run
 
