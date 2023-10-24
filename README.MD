@@ -1,3 +1,16 @@
-## Run
+## Backend server
 
-<code>npm install</code>
+### Requirements
+
+- [ ] Node
+
+- [ ] MongoDB
+
+## Installation and Run
+
+```
+- npm install
+
+- npm start
+
+```
