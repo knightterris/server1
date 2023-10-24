@@ -32,7 +32,7 @@
 
 ## If you already have Mongo Cluster, you can use the following codes which are between the (//Mongo Atlas (Mongo Cluster) && // (end of Mongo Cluster))
 
-### But you have to replace the <username> && <password> of your own in the following code.
+### But you have to replace the 'username' && 'password' of your own in the following code.
 
 ```javascript
 - const uri = "mongodb+srv://<username>:<password>@cluster0.gzjwno9.mongodb.net/?retryWrites=true&w=majority";
