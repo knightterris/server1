@@ -10,8 +10,7 @@ const bcrypt = require("bcrypt");
 
 // use if created a cluster account
 //Mongo Atlas (Mongo Cluster)
-const uri =
-  "mongodb+srv://myan_dev:thebesthacker@cluster0.gzjwno9.mongodb.net/?retryWrites=true&w=majority&ssl=true";
+const uri = "mongodb+srv://myan_dev:thebesthacker@cluster0.gzjwno9.mongodb.net/?retryWrites=true&w=majority";
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -32,7 +31,7 @@ async function run() {
   } catch (err) {
     console.error("Error connecting to MongoDB:", err);
     // Retry in a few seconds
-    setTimeout(run, 5000);
+    setTimeout(connectWithRetry, 5000);
   } finally {
     await client.close();
   }
@@ -50,7 +49,7 @@ app.use(bodyParser.json());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const port = 3000;
+const port = process.env.PORT || 3000;
 const jwt = require("jsonwebtoken");
 const { decode } = require("punycode");
 const secret = "secrettokenwithjwtformyandev";
@@ -466,3 +465,5 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.listen(port, () => {
   console.log("API server running at " + port);
 });
+
+module.exports = app;
