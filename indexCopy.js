@@ -4,37 +4,9 @@ const cors = require("cors");
 app.use(cors());
 const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
 // use if local
-// const mongo = new MongoClient("mongodb://127.0.0.1");
-// const db = mongo.db("myan_dev");
+const mongo = new MongoClient("mongodb://127.0.0.1");
+const db = mongo.db("myan_dev");
 const bcrypt = require("bcrypt");
-
-// use if created a cluster account
-//Mongo Atlas (Mongo Cluster)
-const uri =
-  "mongodb+srv://myan_dev:thebesthacker@cluster0.gzjwno9.mongodb.net/?retryWrites=true&w=majority";
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  },
-});
-
-async function run() {
-  try {
-    await client.connect();
-    await client.db("myan_dev").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
-  } finally {
-    await client.close();
-  }
-}
-run().catch(console.dir);
-// (end of Mongo Cluster)
 
 const multer = require("multer");
 const path = require("path");
@@ -94,15 +66,12 @@ app.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
   const hashPassword = await bcrypt.hash(password, 10);
   try {
-    await client.connect();
-    const emailDuplicate = await client
-      .db("myan_dev")
-      .collection("users")
+    const emailDuplicate = await db.collection("users")
       .findOne({ email });
     if (emailDuplicate) {
       return res.status(500).json({ message: "Email must be unique." });
     } else {
-      const user = await client.db("myan_dev").collection("users").insertOne({
+      const user = await db.collection("users").insertOne({
         name,
         email,
         password: hashPassword,
@@ -117,12 +86,8 @@ app.post("/register", async (req, res) => {
 
 //login
 app.post("/login", async (req, res) => {
-  await client.connect();
   const { email, password } = req.body;
-  const user = await client
-    .db("myan_dev")
-    .collection("users")
-    .findOne({ email });
+  const user = await db.collection("users").findOne({ email });
   if (user) {
     try {
       const valid = await bcrypt.compare(password, user.password);
@@ -133,9 +98,8 @@ app.post("/login", async (req, res) => {
           name: user.name,
         };
         const token = jwt.sign(user, secret);
-        await client
-          .db("myan_dev")
-          .collection("users")
+        await
+          db.collection("users")
           .updateOne(
             { email: email },
             { $set: { token: token, updated_at: new Date() } }
@@ -161,14 +125,11 @@ app.post("/login", async (req, res) => {
 app.get("/get/credentials", async (req, res) => {
   const token = req.headers.authorization;
   try {
-    await client.connect();
     const decodedToken = jwt.verify(token.replace("Bearer ", ""), secret);
     // console.log(decodedToken)
     // console.log(decodedToken._id)
     if (decodedToken) {
-      const user = await client
-        .db("myan_dev")
-        .collection("users")
+      const user = await db.collection("users")
         .findOne({
           _id: new ObjectId(decodedToken._id),
         });
@@ -188,9 +149,8 @@ app.get("/get/credentials", async (req, res) => {
 app.post("/create/topic", async (req, res) => {
   const { userId, topic: topicName } = req.body;
   try {
-    await client.connect();
     const userIdObject = new ObjectId(userId);
-    const topic = await client.db("myan_dev").collection("topics").insertOne({
+    const topic = await db.collection("topics").insertOne({
       userId: userIdObject,
       topicName,
       created_at: new Date(),
@@ -204,10 +164,8 @@ app.post("/create/topic", async (req, res) => {
 //get all topics
 app.get("/get/topics", async (req, res) => {
   try {
-    await client.connect();
-    const topics = await client
-      .db("myan_dev")
-      .collection("topics")
+    const topics = await 
+      db.collection("topics")
       .aggregate([
         {
           $lookup: {
@@ -228,18 +186,16 @@ app.get("/get/topics", async (req, res) => {
 //update topic
 app.put("/update/topic", async (req, res) => {
   const { topicId, userId, topic: topicName } = req.body;
-  const oldTopic = await client
-    .db("myan_dev")
-    .collection("topics")
+  const oldTopic = await 
+    db.collection("topics")
     .findOne({
       _id: new ObjectId(topicId),
     });
   if (oldTopic) {
     try {
-      await client.connect();
       const userIdObject = new ObjectId(userId);
-      const updateTopic = await client
-        .db("myan_dev")
+      const updateTopic = await 
+        db
         .collection("topics")
         .updateOne(
           { _id: new ObjectId(topicId) },
@@ -262,19 +218,17 @@ app.put("/update/topic", async (req, res) => {
 
 // delete topic
 app.delete("/delete/topic", async (req, res) => {
-  await client.connect();
   const { topicId } = req.body;
-  const topic = await client
-    .db("myan_dev")
+  const topic = await 
+  db
     .collection("topics")
     .findOne({
       _id: new ObjectId(topicId),
     });
   try {
     if (topic) {
-      await client.connect();
-      await client
-        .db("myan_dev")
+      await 
+        db
         .collection("topics")
         .deleteOne({
           _id: new ObjectId(topicId),
@@ -296,10 +250,9 @@ app.post("/create/post", upload.any("post_images"), async (req, res) => {
   }
   // console.log('Post Images:', postImages);
   try {
-    await client.connect();
     const userIdObject = new ObjectId(userId);
     const topicIdObject = new ObjectId(topicId);
-    const post = await client.db("myan_dev").collection("posts").insertOne({
+    const post = await db.collection("posts").insertOne({
       caption,
       userId: userIdObject,
       topicId: topicIdObject,
@@ -314,9 +267,8 @@ app.post("/create/post", upload.any("post_images"), async (req, res) => {
 
 app.get("/get/posts", async (req, res) => {
   try {
-    await client.connect();
-    const posts = await client
-      .db("myan_dev")
+    const posts = await 
+      db
       .collection("posts")
       .aggregate([
         {
@@ -345,9 +297,8 @@ app.get("/get/posts", async (req, res) => {
 app.get("/get/posts/:userId", async (req, res) => {
   const userId = req.params.userId;
   try {
-    await client.connect();
-    const posts = await client
-      .db("myan_dev")
+    const posts = await 
+      db
       .collection("posts")
       .aggregate([
         {
@@ -385,17 +336,16 @@ app.put("/update/profile", async (req, res) => {
   for (const i of occupationVal) {
     console.log(i);
   }
-  await client.connect();
-  const user = await client
-    .db("myan_dev")
+  const user = await 
+    db
     .collection("users")
     .findOne({
       _id: new ObjectId(userId),
     });
   if (user) {
     try {
-      await client
-        .db("myan_dev")
+      await 
+        db
         .collection("users")
         .updateOne(
           { _id: new ObjectId(userId) },
@@ -407,8 +357,8 @@ app.put("/update/profile", async (req, res) => {
             },
           }
         );
-      const updatedUser = await client
-        .db("myan_dev")
+      const updatedUser = await 
+        db
         .collection("users")
         .findOne({
           _id: new ObjectId(userId),
@@ -425,9 +375,8 @@ app.put("/update/profile", async (req, res) => {
 // update password
 app.put("/update/password", async (req, res) => {
   const { userId, oldPassword, newPassword } = req.body;
-  await client.connect();
-  const user = await client
-    .db("myan_dev")
+  const user = await 
+    db
     .collection("users")
     .findOne({
       _id: new ObjectId(userId),
@@ -438,8 +387,8 @@ app.put("/update/password", async (req, res) => {
     if (valid) {
       try {
         const hashPassword = await bcrypt.hash(newPassword, 10);
-        await client
-          .db("myan_dev")
+        await 
+          db
           .collection("users")
           .updateOne(
             { _id: new ObjectId(userId) },

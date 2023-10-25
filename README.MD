@@ -38,19 +38,9 @@
 - const uri = "mongodb+srv://<username>:<password>@cluster0.gzjwno9.mongodb.net/?retryWrites=true&w=majority";
 ```
 
-### If you don't have cluster account just comment those codes which are between the comments (//Mongo Atlas (Mongo Cluster) && // (end of Mongo Cluster)) and take a look the following explanation.
+### If you don't have cluster account just comment those codes which are between the comments (//Mongo Atlas (Mongo Cluster) && // (end of Mongo Cluster)) and take a look the indexCopy.js.
 
-```javascript
-- without cluster you can use
-- const mongo = new MongoClient("mongodb://127.0.0.1");
-- const db = mongo.db("myan_dev");
 
-but have to comment all of these
-- await client.connect();
-and change ' client.db("myan_dev").collection("dummyCollection") ' to
-await db.collection("dummyCollection")
-
-```
 
 ## For registration process, we need the followings from frontend
 
