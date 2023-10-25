@@ -15,8 +15,8 @@
     }
   ],
   "functions": {
-    "api/*": {
-      "maxDuration": 20
+    "server/index.js": {
+      "maxDuration": 30
     }
   }
 }
