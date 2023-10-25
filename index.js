@@ -458,6 +458,10 @@ app.put("/update/password", async (req, res) => {
     }
   }
 });
+
+app.get("/test", async (req, res) => {
+  return res.json({ message: "App is working." });
+});
 // Serve uploaded images
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
