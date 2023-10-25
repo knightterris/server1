@@ -289,7 +289,7 @@ app.delete("/delete/topic", async (req, res) => {
 });
 
 app.post("/create/post", upload.any("post_images"), async (req, res) => {
-  const { caption, userId, topicId, created_at } = req.body;
+  const { caption, userId, topicId } = req.body;
   // console.log(req.files ? "images passed" : "try again")
   if (req.files) {
     var postImages = req.files.map((file) => file.filename);
@@ -304,7 +304,7 @@ app.post("/create/post", upload.any("post_images"), async (req, res) => {
       userId: userIdObject,
       topicId: topicIdObject,
       images: postImages,
-      created_at,
+      created_at: new Date(),
     });
     return res.status(200).json(post);
   } catch (error) {
