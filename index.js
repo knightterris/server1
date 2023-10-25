@@ -11,7 +11,7 @@ const bcrypt = require("bcrypt");
 // use if created a cluster account
 //Mongo Atlas (Mongo Cluster)
 const uri =
-  "mongodb+srv://myan_dev:thebesthacker@cluster0.gzjwno9.mongodb.net/?retryWrites=true&w=majority";
+  "mongodb+srv://<username>:<password>@cluster0.gzjwno9.mongodb.net/?retryWrites=true&w=majority";
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
