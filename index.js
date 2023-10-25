@@ -205,10 +205,7 @@ app.post("/create/topic", async (req, res) => {
 app.get("/get/topics", async (req, res) => {
   try {
     await client.connect();
-    const topics = await client
-      .db("myan_dev")
-      .collection("topics")
-      .aggregate([
+    const topics = await client.db("myan_dev").collection("topics").aggregate([
         {
           $lookup: {
             from: "users",
@@ -228,12 +225,9 @@ app.get("/get/topics", async (req, res) => {
 //update topic
 app.put("/update/topic", async (req, res) => {
   const { topicId, userId, topic: topicName } = req.body;
-  const oldTopic = await client
-    .db("myan_dev")
-    .collection("topics")
-    .findOne({
+  const oldTopic = await client.db("myan_dev").collection("topics").findOne({
       _id: new ObjectId(topicId),
-    });
+  });
   if (oldTopic) {
     try {
       await client.connect();
