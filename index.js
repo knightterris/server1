@@ -29,6 +29,10 @@ async function run() {
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
+  } catch (err) {
+    console.error("Error connecting to MongoDB:", err);
+    // Retry in a few seconds
+    setTimeout(run, 5000);
   } finally {
     await client.close();
   }
