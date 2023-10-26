@@ -174,7 +174,7 @@ app.get("/get/credentials", async (req, res) => {
         .collection("users")
         .findOne({
           _id: new ObjectId(decodedToken._id),
-        });
+        }).toArray();
       if (user) {
         return res.status(200).json({ user });
       } else {
@@ -247,7 +247,7 @@ app.put("/update/topic", async (req, res) => {
               updated_at: new Date(),
             },
           }
-        );
+        ).toArray();
       return res.json({ updateTopic, message: "Topic updated." });
     } catch (error) {
       return res.json({ error: error.message });
@@ -302,7 +302,7 @@ app.post("/create/post", upload.any("post_images"), async (req, res) => {
       topicId: topicIdObject,
       images: postImages,
       created_at: new Date(),
-    });
+    }).toArray();
     return res.status(200).json(post);
   } catch (error) {
     return res.json({ error: error.message });
@@ -343,10 +343,7 @@ app.get("/get/posts/:userId", async (req, res) => {
   const userId = req.params.userId;
   try {
     await client.connect();
-    const posts = await client
-      .db("myan_dev")
-      .collection("posts")
-      .aggregate([
+    const posts = await client.db("myan_dev").collection("posts").aggregate([
         {
           $match: {
             userId: new ObjectId(userId),
@@ -409,7 +406,7 @@ app.put("/update/profile", async (req, res) => {
         .collection("users")
         .findOne({
           _id: new ObjectId(userId),
-        });
+        }).toArray();
       console.log(updatedUser);
       return res.status(200).json({ updatedUser });
     } catch (error) {
@@ -449,13 +446,113 @@ app.put("/update/password", async (req, res) => {
           );
         return res.status(200).json({ message: "Password has been changed." });
       } catch (error) {
-        console.error(error);
-        return res.status(500);
+        console.log(error);
+      return res.status(500).json({ error: error.message });
       }
     }
   }
 });
 
+// delete profile or delete account
+app.delete("/delete/profile", async (req, res) => {
+  try {
+    const { userId } = req.body;
+    await client.connect();
+    const user = await client.db("myan_dev").collection("users").findOne({
+      _id: new ObjectId(userId),
+    });
+    if (user) {
+      await client.db("myan_dev").collection("users").deleteOne({
+        _id: new ObjectId(userId),
+      });
+      return res.status(200).json({message: "Account has been deleted!"});
+    }else{
+      return res.status(404).json({message: "Account not found!"});
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: error.message }); 
+  }
+  
+});
+
+// create save post
+app.post("/save/post", async(req, res) => {
+  const { postId, userId, topicId } = req.body;
+  try {
+    await client.connect();
+    const savedPost = await client.db("myan_dev").collection("saved_posts").insertOne({
+      post_id: new ObjectId(postId),
+      user_id: new ObjectId(userId),
+      topic_id: new ObjectId(topicId),
+      created_at: new Date()
+    }).toArray();
+    return res.status(200).json(savedPost);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: error.message }); 
+  }
+});
+
+app.get("/get/savedPosts", async(req, res) => {
+  const { userId } = req.body;
+  try {
+    await client.connect();
+    const posts = await client.db("myan_dev").collection("saved_posts").aggregate([
+      {
+        $match: {
+          user_id: new ObjectId(userId),
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "user_id",
+          foreignField: "_id",
+          as: "creator",
+        },
+      },
+      {
+        $lookup: {
+          from: "posts",
+          localField: "post_id",
+          foreignField: "_id",
+          as: "my_posts",
+        },
+      },
+      {
+        $lookup: {
+          from: "topics",
+          localField: "topic_id",
+          foreignField: "_id",
+          as: "topic",
+        },
+      },
+    ]).toArray();
+    if(posts){
+      return res.status(200).json(posts);
+    }else{
+      return res.status(404).json({message: "No post found!"});
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: error.message }); 
+  }
+});
+
+app.delete("/unsave/post", async(req, res) => {
+  const { savedPostId } = req.body;
+  try {
+    await client.connect();
+    await client.db("myan_dev").collection("saved_posts").deleteOne({
+      _id: new ObjectId(savedPostId),
+    });
+    return res.status(200).json({message: "Unsaved post."});
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: error.message }); 
+  }
+});
 app.get("/test", async (req, res) => {
   return res.json({ message: "App is working." });
 });
