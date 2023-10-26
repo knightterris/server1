@@ -31,7 +31,6 @@ async function run() {
   } catch (err) {
     console.error("Error connecting to MongoDB:", err);
     // Retry in a few seconds
-    setTimeout(connectWithRetry, 5000);
   } finally {
     await client.close();
   }
