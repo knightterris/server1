@@ -665,6 +665,61 @@ app.delete("delete/comment", async(req,res) => {
     return res.status(500).json({ error: error.message }); 
   }
 });
+
+//toggle like to post and comments(toggle like function need to be refactored)
+app.put("/toggle/like", async(req, res) => {
+  const { postId, commentId, userId, event } = req.body;
+  try {
+    await client.connect();
+    if(event == "likePost" && postId != null && postId != '' && userId != null && userId != '' ){
+      const post = await client.db("myan_dev").collection("posts").findOne({
+        _id: new ObjectId(postId)
+      });
+      post.reactions = post.reactions || [];
+      if (post.reactions.find(item => item.toString() === userId)) {
+        post.reactions = post.reactions.filter(uid => uid.toString() !== userId);
+      } else {
+        post.reactions.push(new ObjectId(userId));
+      }
+      await client.db("myan_dev").collection("posts").updateOne(
+        { _id: new ObjectId(postId) },
+        {
+          $set: post,
+        },
+      );
+      const likedPost = await client.db("myan_dev").collection("posts").findOne({
+        _id: new ObjectId(postId)
+      }).toArray();
+      return res.status(200).json({ message: 'Liked post', likedPost });
+
+    }
+    //comment toggle like
+    else if(event == "likeComment" && commentId != null && commentId != '' && userId != null && userId != '' ){
+      const comment = await client.db("myan_dev").collection("comments").findOne({
+        _id: new ObjectId(commentId)
+      });
+      comment.reactions = comment.reactions || [];
+      if (comment.reactions.find(item => item.toString() === userId)) {
+        comment.reactions = comment.reactions.filter(uid => uid.toString() !== userId);
+      } else {
+        comment.reactions.push(new ObjectId(userId));
+      }
+      await client.db("myan_dev").collection("comments").updateOne(
+        { _id: new ObjectId(postId) },
+        {
+          $set: comment,
+        },
+      );
+      const likedComment = await client.db("myan_dev").collection("comments").findOne({
+        _id: new ObjectId(commentId)
+      }).toArray();
+      return res.status(200).json({ message: 'Liked comment', likedComment });
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: error.message }); 
+  }
+})
 app.get("/test", async (req, res) => {
   return res.json({ message: "App is working." });
 });
