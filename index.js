@@ -30,7 +30,6 @@ async function run() {
     );
   } catch (err) {
     console.error("Error connecting to MongoDB:", err);
-    // Retry in a few seconds
   } finally {
     await client.close();
   }
@@ -234,9 +233,7 @@ app.put("/update/topic", async (req, res) => {
     try {
       await client.connect();
       const userIdObject = new ObjectId(userId);
-      const updateTopic = await client
-        .db("myan_dev")
-        .collection("topics")
+      const updateTopic = await client.db("myan_dev").collection("topics")
         .updateOne(
           { _id: new ObjectId(topicId) },
           {
@@ -246,7 +243,7 @@ app.put("/update/topic", async (req, res) => {
               updated_at: new Date(),
             },
           }
-        ).toArray();
+        );
       return res.json({ updateTopic, message: "Topic updated." });
     } catch (error) {
       return res.json({ error: error.message });
@@ -547,6 +544,122 @@ app.delete("/unsave/post", async(req, res) => {
       _id: new ObjectId(savedPostId),
     });
     return res.status(200).json({message: "Unsaved post."});
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: error.message }); 
+  }
+});
+
+app.post("/post/comment",upload.any("comment_images"), async (req, res) => {
+  const { userId, postId, comment } = req.body; 
+  // if (req.files) {
+  //   var postImages = req.files.map((file) => file.filename);
+  // }
+  try {
+    await client.connect();
+    const comment = await client.db("myan_dev").collection("comments").insertOne({
+      user_id: new ObjectId(userId),
+      post_id: new ObjectId(postId),
+      commentText: comment,
+      created_at: new Date()
+      // images: postImages
+    });
+    return res.status(201).json({message: "Commented", comment});
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: error.message }); 
+  }
+});
+
+app.get("/get/post/comment", async(req, res) => {
+  const { userId, postId } = req.body;
+  try {
+    await client.connect();
+    const comments = await client.db("myan_dev").collection("comments").aggregate([
+      { 
+        $match : { 
+          userId : new ObjectId(userId), 
+          postId : new ObjectId(postId)
+        }
+      },
+      {
+        $lookup:{
+          from:"users",
+          localField:"userId",
+          foreignField:"_id",
+          as:"commenter"
+        }
+      }
+    ]).toArray();
+    if(!comments){
+      return res.status(404).json({message: "No comments for this post"})
+    }
+    else{
+      return res.status(200).json(comments);
+    }
+  } catch (error) {
+    console.log(error.message);
+    return res.status(500).json({ error: error.message }); 
+  }
+});
+
+app.put("/update/comment", upload.any("comment_updateImg"), async(req, res) => {
+  const { userId, postId, commentId, newComment } = req.body;
+  // if (req.files) {
+  //   var postImages = req.files.map((file) => file.filename);
+  // }
+  try { 
+    await client.connect();
+    const comment = await client.db("myan_dev").collection("comments").findOne({
+      userId: new ObjectId(userId),
+      _id: new ObjectId(commentId),
+      postId: new ObjectId(postId)
+    });
+    if (comment){
+      await client.db("myan_dev").collection("comments").findOneAndUpdate(
+        { userId: new ObjectId(userId) },
+        { _id: new ObjectId(commentId) },
+        { postId: new ObjectId(postId) },
+        {
+          $set: {
+            commentText: newComment,
+            updated_at: new Date(),
+          },
+        });
+        const updatedComment = await client.db("myan_dev").collection("comments").findOne({
+          userId: new ObjectId(userId),
+          _id: new ObjectId(commentId),
+          postId: new ObjectId(postId)
+        }).toArray();
+        return res.status(200).json({message: "Comment Updated", updatedComment});
+    }
+    else{
+      return res.status(404).json({message: "Comment not found"})
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: error.message }); 
+  }
+});
+
+app.delete("delete/comment", async(req,res) => {
+  const { commentId } = req.body;
+  try {
+    await client.connect();
+    // await client.db("myan_dev").collection("comments").findOneAndDelete({
+    //   _id: new ObjectId(commentId)
+    // })
+    const comment = await client.db("myan_dev").collection("comments").findOne({
+      _id: new ObjectId(commentId),
+    });
+    if(comment){
+      await client.db("myan_dev").collection("comments").deleteOne({
+        _id: new ObjectId(commentId)
+      });
+      return res.status(200).json({message: "Comment Deleted"})
+    }else{
+      return res.status(404).json({message: "Comment Not Found"})
+    }
   } catch (error) {
     console.log(error);
     return res.status(500).json({ error: error.message }); 

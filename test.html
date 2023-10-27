@@ -8,25 +8,87 @@
 <body>
     <h3>get topics</h3>
     <button onclick="getTopics()">get</button>
+
+    <h3>create topics</h3>
+    <form onsubmit="createTopic(event)">
+        <input type="text" id="topicName" placeholder="Topic Name" required>
+        <button type="submit">Create Topic</button>
+    </form>
+
+    <h3>Update Topics</h3>
+    <form onsubmit="updateTopic(event)">
+        <input type="text" id="topicId" placeholder="Topic ID" required>
+        <input type="text" id="userId" placeholder="User ID" required>
+        <input type="text" id="newTopicName" placeholder="New Topic Name" required>
+        <button type="submit">Update Topic</button>
+    </form>
     
-    <script>
-        const api = `http://localhost:3000`;
-        async function getTopics() {
-            try {
-                const res = await fetch(`${api}/get/topics`, {
-                    method: "GET",
-                    headers: { "Content-Type": "application/json" },
-                });
-                if (!res.ok) {
-                    console.error("Request failed");
-                    return;
-                }
-                const data = await res.json();
-                console.log(data);
-            } catch (error) {
-                console.error(error);
+    
+    
+<script>
+    const api = `http://localhost:3000`;
+    const userId = '6512c1a497f66a1b629f3c7a'; 
+    const topicId = '64eda2d26a4ab342bbe3c036'; 
+
+    async function getTopics() {
+        try {
+            const res = await fetch(`${api}/get/topics`, {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+            });
+            if (!res.ok) {
+                console.error("Request failed");
+                return;
             }
+            const data = await res.json();
+            console.log(data);
+        } catch (error) {
+            console.error(error);
         }
-    </script> 
+    }
+    //create topic
+    async function createTopic(event) {
+        event.preventDefault(); 
+        
+        const topicName = document.getElementById("topicName").value;
+        if (!topicName) {
+            console.error("Topic Name is required");
+            return;
+        }
+
+
+        const res = await fetch(`${api}/create/topic`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, topicName }),
+        });
+
+        if (res.ok) {
+            const topic = await res.json();
+            console.log(topic);
+        } else {
+            console.error("Failed to create a topic");
+        }
+    }
+
+    async function updateTopic(event) {
+        event.preventDefault(); 
+
+        const topicId = document.getElementById("topicId").value;
+        const userId = document.getElementById("userId").value;
+        const topicName = document.getElementById("newTopicName").value;
+        console.log(topicName)
+
+        const res = await fetch(`${api}/update/topic`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ topicId, userId, topicName }),
+          });
+          if (!res.ok) return false;
+        
+          const updatedTopic = res.json();
+          console.log(updatedTopic) ;
+      }
+</script> 
 </body>
 </html>
