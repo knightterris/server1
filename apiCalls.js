@@ -31,9 +31,13 @@ export async function getToken() {
 }
 
 export async function createTopic(userId, topicName) {
+  const token = await getToken();
   const res = await fetch(`${api}/create/topic`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({ userId, topicName }),
   });
   if (!res.ok) return false;
@@ -100,7 +104,9 @@ export async function createPost(caption, userId, topicId, postImages) {
 export async function getPosts() {
   const res = await fetch(`${api}/get/posts`, {
     method: "GET",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+    },
   });
   if (!res.ok) return false;
   const posts = await res.json();
@@ -116,6 +122,9 @@ export async function getUserPosts(userId) {
   const posts = await res.json();
   return posts;
 }
+
+// export async function updatePost(userId,postId)
+
 
 export async function updateProfile(
   userId,
