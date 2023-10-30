@@ -45,11 +45,15 @@ export async function createTopic(userId, topicName) {
   return topic;
 }
 
-export async function getTopics() {
+export async function getTopics(token) {
+  const token = token;
   const res = await fetch(`${api}/get/topics`, {
-    method: "get",
-    headers: { "Content-Type": "application/json" },
-  });
+    method: "GET",
+    headers: { 
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    }
+});
   if (!res.ok) return false;
 
   const topics = await res.json();

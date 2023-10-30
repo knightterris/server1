@@ -7,6 +7,20 @@ const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
 // const mongo = new MongoClient("mongodb://127.0.0.1");
 // const db = mongo.db("myan_dev");
 const bcrypt = require("bcrypt");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+
+const bodyParser = require("body-parser");
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+const port = process.env.PORT || 3001;
+const jwt = require("jsonwebtoken");
+const { decode } = require("punycode");
+const secret = "secrettokenwithjwtformyandev";
 
 // use if created a cluster account
 //Mongo Atlas (Mongo Cluster)
@@ -36,21 +50,6 @@ async function run() {
 }
 run().catch(console.dir);
 // (end of Mongo Cluster)
-
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-
-const bodyParser = require("body-parser");
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-const port = process.env.PORT || 3000;
-const jwt = require("jsonwebtoken");
-const { decode } = require("punycode");
-const secret = "secrettokenwithjwtformyandev";
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -299,24 +298,36 @@ app.delete("/delete/topic", auth,async (req, res) => {
 app.post("/create/post", upload.any("post_images"), auth,async (req, res) => {
   const { caption, userId, topicId } = req.body;
   // console.log(req.files ? "images passed" : "try again")
-  if (req.files) {
-    var postImages = req.files.map((file) => file.filename);
-  }
+  // if (req.files) {
+  //   var postImages = req.files.map((file) => file.filename);
+  // }
   // console.log('Post Images:', postImages);
-  try {
-    await client.connect();
-    const userIdObject = new ObjectId(userId);
-    const topicIdObject = new ObjectId(topicId);
-    const post = await client.db("myan_dev").collection("posts").insertOne({
-      caption,
-      userId: userIdObject,
-      topicId: topicIdObject,
-      images: postImages,
-      created_at: new Date(),
-    }).toArray();
-    return res.status(200).json(post);
-  } catch (error) {
-    return res.json({ error: error.message });
+  if (
+    userId && topicId && caption && 
+    userId !== "" && topicId !== "" && caption !== "" 
+  ) {
+    if (req.files) {
+      var postImages = req.files.map((file) => file.filename);
+    } else {
+      postImages = [];
+    }
+    try {
+      await client.connect();
+      const userIdObject = new ObjectId(userId);
+      const topicIdObject = new ObjectId(topicId);
+      const post = await client.db("myan_dev").collection("posts").insertOne({
+        caption,
+        userId: userIdObject,
+        topicId: topicIdObject,
+        images: postImages,
+        created_at: new Date(),
+      });
+      return res.status(200).json(post);
+    } catch (error) {
+      return res.json({ error: error.message });
+    }
+  } else {
+    return res.status(400).json({ message: "Please fill all fields." });
   }
 });
 

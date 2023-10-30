@@ -95,3 +95,21 @@
 
 
 //express code
+try {
+    await client.connect();
+    const userIdObject = new ObjectId(userId);
+    const topicIdObject = new ObjectId(topicId);
+    const post = await client.db("myan_dev").collection("posts").insertOne({
+      caption,
+      userId: userIdObject,
+      topicId: topicIdObject,
+      images: postImages,
+      created_at: new Date(),
+    }).toArray();
+    return res.status(200).json(post);
+  } catch (error) {
+    return res.json({ error: error.message });
+  }
+  // if (req.files) {
+    //   var postImages = req.files.map((file) => file.filename);
+    // }
