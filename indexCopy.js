@@ -294,6 +294,7 @@ app.get("/get/posts", async (req, res) => {
     return res.json({ message: error.message });
   }
 });
+
 app.get("/get/posts/:userId", async (req, res) => {
   const userId = req.params.userId;
   try {
