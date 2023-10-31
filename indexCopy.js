@@ -64,60 +64,72 @@ function auth(req, res, next) {
 //register
 app.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
-  const hashPassword = await bcrypt.hash(password, 10);
-  try {
-    const emailDuplicate = await db.collection("users")
-      .findOne({ email });
-    if (emailDuplicate) {
-      return res.status(500).json({ message: "Email must be unique." });
-    } else {
-      const user = await db.collection("users").insertOne({
-        name,
-        email,
-        password: hashPassword,
-        created_at: new Date(),
-      });
-      res.status(200).json({ user, message: "User inserted." });
+  if (
+    name === null || name === '' || name === undefined &&
+    email === null || email === '' || email === undefined &&
+    password === null || password === '' || password === undefined
+  ) {
+    return res.status(400).json({message: "Please check your inputs."});
+  } else {
+    const hashPassword = await bcrypt.hash(password, 10);
+    try {
+      const emailDuplicate = await db.collection("users").findOne({ email });
+      if (emailDuplicate) {
+        return res.status(500).json({ message: "Email must be unique." });
+      } else {
+        const user = await db.collection("users").insertOne({
+          name,
+          email,
+          password: hashPassword,
+          created_at: new Date(),
+        });
+        res.status(200).json({ user, message: "User inserted." });
+      }
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
     }
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
   }
 });
 
 //login
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
-  const user = await db.collection("users").findOne({ email });
-  if (user) {
-    try {
-      const valid = await bcrypt.compare(password, user.password);
-      if (valid) {
-        const userData = {
-          id: user._id,
-          email: user.email,
-          name: user.name,
-        };
-        const token = jwt.sign(user, secret);
-        await
-          db.collection("users")
-          .updateOne(
-            { email: email },
-            { $set: { token: token, updated_at: new Date() } }
-          );
-        // console.log(token)
-        return res.send({ token });
-      } else {
-        return res
-          .status(400)
-          .json({ msg: "Something went wrong! Please try again!" });
-      }
-    } catch (error) {
-      return res.json({ error: error.message });
-    }
+  if (
+    email === null || email === '' || email === undefined &&
+    password === null || password === '' || password === undefined
+  ) {
+    return res.status(400).json({message: "Please check your inputs."});
   } else {
-    return res
-      .status(400)
-      .json({ msg: "Something went wrong! Please try again!" });
+    const user = await db.collection("users").findOne({ email });
+    if (user) {
+      try {
+        const valid = await bcrypt.compare(password, user.password);
+        if (valid) {
+          const userData = {
+            id: user._id,
+            email: user.email,
+            name: user.name,
+          };
+          const token = jwt.sign(user, secret);
+          await db.collection("users").updateOne(
+              { email: email },
+              { $set: { token: token, updated_at: new Date() } }
+            );
+          // console.log(token)
+          return res.status(200).send(token);
+        } else {
+          return res
+            .status(400)
+            .json({ msg: "Something went wrong! Please try again!" });
+        }
+      } catch (error) {
+        return res.json({ error: error.message });
+      }
+    } else {
+      return res
+        .status(400)
+        .json({ msg: "Something went wrong! Please try again!" });
+    }
   }
 });
 
@@ -146,27 +158,33 @@ app.get("/get/credentials", async (req, res) => {
 });
 
 //create topic
-app.post("/create/topic", async (req, res) => {
+app.post("/create/topic", auth, async (req, res) => {
   const { userId, topic: topicName } = req.body;
-  try {
-    const userIdObject = new ObjectId(userId);
-    const topic = await db.collection("topics").insertOne({
-      userId: userIdObject,
-      topicName,
-      created_at: new Date(),
-    });
-    return res.status(200).json({ message: "Topic Created", topic });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
+  // console.log(topic);
+  if (
+    userId === null || userId === '' || userId === undefined &&
+    topicName === null || topicName === '' || topicName === undefined
+  ) {
+    return res.status(400).json({message: "Please check your inputs."});
+  } else {
+    try {
+      const userIdObject = new ObjectId(userId);
+      const topic = await db.collection("topics").insertOne({
+        userId: userIdObject,
+        topicName,
+        created_at: new Date(),
+      });
+      return res.status(200).json({ message: "Topic Created", topic });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
   }
 });
 
 //get all topics
-app.get("/get/topics", async (req, res) => {
+app.get("/get/topics", auth, async (req, res) => {
   try {
-    const topics = await 
-      db.collection("topics")
-      .aggregate([
+    const topics = await db.collection("topics").aggregate([
         {
           $lookup: {
             from: "users",
@@ -175,8 +193,7 @@ app.get("/get/topics", async (req, res) => {
             as: "creator",
           },
         },
-      ])
-      .toArray();
+      ]).toArray();
     return res.json(topics);
   } catch (error) {
     return res.json({ error: error.message });
@@ -184,40 +201,44 @@ app.get("/get/topics", async (req, res) => {
 });
 
 //update topic
-app.put("/update/topic", async (req, res) => {
+app.put("/update/topic", auth, async (req, res) => {
   const { topicId, userId, topic: topicName } = req.body;
-  const oldTopic = await 
-    db.collection("topics")
-    .findOne({
-      _id: new ObjectId(topicId),
-    });
-  if (oldTopic) {
-    try {
-      const userIdObject = new ObjectId(userId);
-      const updateTopic = await 
-        db
-        .collection("topics")
-        .updateOne(
-          { _id: new ObjectId(topicId) },
-          {
-            $set: {
-              userId: userIdObject,
-              topicName: topicName,
-              updated_at: new Date(),
-            },
-          }
-        );
-      return res.json({ updateTopic, message: "Topic updated." });
-    } catch (error) {
-      return res.json({ error: error.message });
-    }
+  if (
+    userId === null || userId === '' || userId === undefined &&
+    topicId === null || topicId === '' || topicId === undefined &&
+    topicName === null || topicName === '' || topicName === undefined
+  ) {
+    return res.status(400).json({message: "Please check your inputs."});
   } else {
-    return res.status(404).json({ message: "Topic not found." });
+    const oldTopic = await db.collection("topics").findOne({
+        _id: new ObjectId(topicId),
+    });
+    if (oldTopic) {
+      try {
+        const userIdObject = new ObjectId(userId);
+        const updateTopic = await db.collection("topics")
+          .updateOne(
+            { _id: new ObjectId(topicId) },
+            {
+              $set: {
+                userId: userIdObject,
+                topicName: topicName,
+                updated_at: new Date(),
+              },
+            }
+          );
+        return res.json({ updateTopic, message: "Topic updated." });
+      } catch (error) {
+        return res.json({ error: error.message });
+      }
+    } else {
+      return res.status(404).json({ message: "Topic not found." });
+    }
   }
 });
 
 // delete topic
-app.delete("/delete/topic", async (req, res) => {
+app.delete("/delete/topic",auth, async (req, res) => {
   const { topicId } = req.body;
   const topic = await 
   db
@@ -242,30 +263,104 @@ app.delete("/delete/topic", async (req, res) => {
   }
 });
 
-app.post("/create/post", upload.any("post_images"), async (req, res) => {
-  const { caption, userId, topicId, created_at } = req.body;
+app.post("/create/post", upload.any("post_images"), auth,async (req, res) => {
+  const { caption, userId, topicId } = req.body;
   // console.log(req.files ? "images passed" : "try again")
-  if (req.files) {
-    var postImages = req.files.map((file) => file.filename);
-  }
+  // if (req.files) {
+  //   var postImages = req.files.map((file) => file.filename);
+  // }
   // console.log('Post Images:', postImages);
-  try {
-    const userIdObject = new ObjectId(userId);
-    const topicIdObject = new ObjectId(topicId);
-    const post = await db.collection("posts").insertOne({
-      caption,
-      userId: userIdObject,
-      topicId: topicIdObject,
-      images: postImages,
-      created_at,
-    });
-    return res.status(200).json(post);
-  } catch (error) {
-    return res.json({ error: error.message });
+  if (
+    userId && topicId && caption && 
+    userId !== "" && topicId !== "" && caption !== "" 
+  ) {
+    if (req.files) {
+      var postImages = req.files.map((file) => file.filename);
+    } else {
+      postImages = [];
+    }
+    try {
+      const userIdObject = new ObjectId(userId);
+      const topicIdObject = new ObjectId(topicId);
+      const post = await db.collection("posts").insertOne({
+        caption,
+        userId: userIdObject,
+        topicId: topicIdObject,
+        images: postImages,
+        created_at: new Date(),
+      });
+      return res.status(200).json(post);
+    } catch (error) {
+      return res.json({ error: error.message });
+    }
+  } else {
+    return res.status(400).json({ message: "Please fill all fields." });
   }
 });
 
-app.get("/get/posts", async (req, res) => {
+app.put("/update/post", upload.any("post_updateImages"), auth, async (req, res) => {
+  const { updatedCaption, userId, topicId, postId } = req.body;
+  const post = await db.collection("posts").findOne({
+    _id: new ObjectId(postId)
+  });
+  let oldImages = [...post.images];
+  // console.log(oldImages);
+  if (!updatedCaption || !userId || !topicId || !postId) {
+    return res.status(400).json({message: "Please check your inputs."});
+  }else{
+    try {
+      if (req.files) {
+        for (const filePath of filePathsToDelete) {
+          const oldImagesPath = `./uploads/${filePath}`;
+          if (oldImagesPath !== "./uploads/null" && oldImagesPath !== "./uploads/undefined" && fs.existsSync(oldImagesPath)) {
+            fs.unlinkSync(oldImagesPath);
+          }
+        }
+        var postUpdateImages = req.files.map((file) => file.filename);
+        const updatePost = await db.collection("posts").findOneAndUpdate(
+          { _id: new ObjectId(postId) },
+          { userId: new ObjectId(userId) },
+          { topicId: new ObjectId(topicId) },
+        {
+          $set: {
+            caption: updatedCaption,
+            images: postUpdateImages,
+            updated_at: new Date(),
+          },
+        });
+
+        // note here is the constant `updatedPost`
+        const updatedPost = await db.collection("posts").findOne({
+          _id: new ObjectId(postId)
+        });
+
+        return res.status(200).json({message: "Post updated", updatedPost})
+      } else {
+        postUpdateImages = oldImages;
+        const updatePost = await db.collection("posts").findOneAndUpdate(
+          { userId: new ObjectId(userId) },
+          { topicId: new ObjectId(topicId) },
+          { postId: new ObjectId(postId) },
+          {
+            $set: {
+              caption: updatedCaption,
+              images: postUpdateImages,
+              updated_at: new Date(),
+            },
+          })
+        // note here is the constant `updatedPost`
+        const updatedPost = await db.collection("posts").findOne({
+          _id: new ObjectId(postId)
+        });
+
+        return res.status(200).json({message: "Post updated", updatedPost})
+      }
+    } catch (error) {
+      return res.json({ error: error.message });
+    }
+  }
+});
+app.get("/get/posts", auth,async (req, res) => {
   try {
     const posts = await 
       db

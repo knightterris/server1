@@ -146,7 +146,7 @@ app.post("/login", async (req, res) => {
               { $set: { token: token, updated_at: new Date() } }
             );
           // console.log(token)
-          return res.send({ token });
+          return res.status(200).send(token);
         } else {
           return res
             .status(400)
@@ -331,13 +331,74 @@ app.post("/create/post", upload.any("post_images"), auth,async (req, res) => {
   }
 });
 
+app.put("/update/post", upload.any("post_updateImages"), auth, async (req, res) => {
+  const { updatedCaption, userId, topicId, postId } = req.body;
+  await client.connect();
+  const post = await client.db("myan_dev").collection("posts").findOne({
+    _id: new ObjectId(postId)
+  });
+  let oldImages = [...post.images];
+  // console.log(oldImages);
+  if (!updatedCaption || !userId || !topicId || !postId) {
+    return res.status(400).json({message: "Please check your inputs."});
+  }else{
+    try {
+      if (req.files) {
+        for (const filePath of filePathsToDelete) {
+          const oldImagesPath = `./uploads/${filePath}`;
+          if (oldImagesPath !== "./uploads/null" && oldImagesPath !== "./uploads/undefined" && fs.existsSync(oldImagesPath)) {
+            fs.unlinkSync(oldImagesPath);
+          }
+        }
+        var postUpdateImages = req.files.map((file) => file.filename);
+        const updatePost = await client.db("myan_dev").collection("posts").findOneAndUpdate(
+          { _id: new ObjectId(postId) },
+          { userId: new ObjectId(userId) },
+          { topicId: new ObjectId(topicId) },
+        {
+          $set: {
+            caption: updatedCaption,
+            images: postUpdateImages,
+            updated_at: new Date(),
+          },
+        });
+
+        // note here is the constant `updatedPost`
+        const updatedPost = await client.db("myan_dev").collection("posts").findOne({
+          _id: new ObjectId(postId)
+        });
+
+        return res.status(200).json({message: "Post updated", updatedPost})
+      } else {
+        postUpdateImages = oldImages;
+        const updatePost = await client.db("myan_dev").collection("posts").findOneAndUpdate(
+          { userId: new ObjectId(userId) },
+          { topicId: new ObjectId(topicId) },
+          { postId: new ObjectId(postId) },
+          {
+            $set: {
+              caption: updatedCaption,
+              images: postUpdateImages,
+              updated_at: new Date(),
+            },
+          })
+        // note here is the constant `updatedPost`
+        const updatedPost = await client.db("myan_dev").collection("posts").findOne({
+          _id: new ObjectId(postId)
+        });
+
+        return res.status(200).json({message: "Post updated", updatedPost})
+      }
+    } catch (error) {
+      return res.json({ error: error.message });
+    }
+  }
+});
+
 app.get("/get/posts", auth,async (req, res) => {
   try {
     await client.connect();
-    const posts = await client
-      .db("myan_dev")
-      .collection("posts")
-      .aggregate([
+    const posts = await client.db("myan_dev").collection("posts").aggregate([
         {
           $lookup: {
             from: "users",
