@@ -1,7 +1,7 @@
 const { MongoClient, ObjectId } = require("mongodb");
 const mongo = new MongoClient("mongodb://127.0.0.1");
 const db = mongo.db("myan_dev");
-
+const bcrypt = require("bcrypt");
 
 async function seedTopic(){
     console.log("Start seeding Topics");
@@ -160,8 +160,6 @@ async function seedPosts() {
         console.error("Posts seeding failed!", error)
     }
 }
-
-const bcrypt = require("bcrypt");
 
 async function seedUsers() {
     console.log("Start seeding Users.");
@@ -411,14 +409,14 @@ async function seedComments() {
 
 
 async function seed() {
-    // await seedTopic();
-    // console.log("Done Seeding Topic!"); 
-    // await seedPosts();
-    // console.log("Done Seeding Posts!"); 
-    // await seedUsers();
-    // console.log("Done Seeding Users!")
-    // await seedSavePosts();
-    // console.log("Done Seeding SavePosts!");
+    await seedTopic();
+    console.log("Done Seeding Topic!"); 
+    await seedPosts();
+    console.log("Done Seeding Posts!"); 
+    await seedUsers();
+    console.log("Done Seeding Users!");
+    await seedSavePosts();
+    console.log("Done Seeding SavePosts!");
     await seedComments();
     console.log("Done Seeding Comments!");
     process.exit(0);
