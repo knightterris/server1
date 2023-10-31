@@ -7,6 +7,20 @@ const { MongoClient, ObjectId, ServerApiVersion } = require("mongodb");
 // const mongo = new MongoClient("mongodb://127.0.0.1");
 // const db = mongo.db("myan_dev");
 const bcrypt = require("bcrypt");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+
+const bodyParser = require("body-parser");
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+const port = process.env.PORT || 3001;
+const jwt = require("jsonwebtoken");
+const { decode } = require("punycode");
+const secret = "secrettokenwithjwtformyandev";
 
 // use if created a cluster account
 //Mongo Atlas (Mongo Cluster)
@@ -36,21 +50,6 @@ async function run() {
 }
 run().catch(console.dir);
 // (end of Mongo Cluster)
-
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-
-const bodyParser = require("body-parser");
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-const port = process.env.PORT || 3000;
-const jwt = require("jsonwebtoken");
-const { decode } = require("punycode");
-const secret = "secrettokenwithjwtformyandev";
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -93,26 +92,31 @@ function auth(req, res, next) {
 //register
 app.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
-  const hashPassword = await bcrypt.hash(password, 10);
-  try {
-    await client.connect();
-    const emailDuplicate = await client
-      .db("myan_dev")
-      .collection("users")
-      .findOne({ email });
-    if (emailDuplicate) {
-      return res.status(500).json({ message: "Email must be unique." });
-    } else {
-      const user = await client.db("myan_dev").collection("users").insertOne({
-        name,
-        email,
-        password: hashPassword,
-        created_at: new Date(),
-      });
-      res.status(200).json({ user, message: "User inserted." });
+  if (
+    name === null || name === '' || name === undefined &&
+    email === null || email === '' || email === undefined &&
+    password === null || password === '' || password === undefined
+  ) {
+    return res.status(400).json({message: "Please check your inputs."});
+  } else {
+    const hashPassword = await bcrypt.hash(password, 10);
+    try {
+      await client.connect();
+      const emailDuplicate = await client.db("myan_dev").collection("users").findOne({ email });
+      if (emailDuplicate) {
+        return res.status(500).json({ message: "Email must be unique." });
+      } else {
+        const user = await client.db("myan_dev").collection("users").insertOne({
+          name,
+          email,
+          password: hashPassword,
+          created_at: new Date(),
+        });
+        res.status(200).json({ user, message: "User inserted." });
+      }
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
     }
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
   }
 });
 
@@ -120,41 +124,42 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
   await client.connect();
   const { email, password } = req.body;
-  const user = await client
-    .db("myan_dev")
-    .collection("users")
-    .findOne({ email });
-  if (user) {
-    try {
-      const valid = await bcrypt.compare(password, user.password);
-      if (valid) {
-        const userData = {
-          id: user._id,
-          email: user.email,
-          name: user.name,
-        };
-        const token = jwt.sign(user, secret);
-        await client
-          .db("myan_dev")
-          .collection("users")
-          .updateOne(
-            { email: email },
-            { $set: { token: token, updated_at: new Date() } }
-          );
-        // console.log(token)
-        return res.send({ token });
-      } else {
-        return res
-          .status(400)
-          .json({ msg: "Something went wrong! Please try again!" });
-      }
-    } catch (error) {
-      return res.json({ error: error.message });
-    }
+  if (
+    email === null || email === '' || email === undefined &&
+    password === null || password === '' || password === undefined
+  ) {
+    return res.status(400).json({message: "Please check your inputs."});
   } else {
-    return res
-      .status(400)
-      .json({ msg: "Something went wrong! Please try again!" });
+    const user = await client.db("myan_dev").collection("users").findOne({ email });
+    if (user) {
+      try {
+        const valid = await bcrypt.compare(password, user.password);
+        if (valid) {
+          const userData = {
+            id: user._id,
+            email: user.email,
+            name: user.name,
+          };
+          const token = jwt.sign(user, secret);
+          await client.db("myan_dev").collection("users").updateOne(
+              { email: email },
+              { $set: { token: token, updated_at: new Date() } }
+            );
+          // console.log(token)
+          return res.send({ token });
+        } else {
+          return res
+            .status(400)
+            .json({ msg: "Something went wrong! Please try again!" });
+        }
+      } catch (error) {
+        return res.json({ error: error.message });
+      }
+    } else {
+      return res
+        .status(400)
+        .json({ msg: "Something went wrong! Please try again!" });
+    }
   }
 });
 
@@ -186,24 +191,32 @@ app.get("/get/credentials", async (req, res) => {
 });
 
 //create topic
-app.post("/create/topic", async (req, res) => {
+app.post("/create/topic", auth, async (req, res) => {
   const { userId, topic: topicName } = req.body;
-  try {
-    await client.connect();
-    const userIdObject = new ObjectId(userId);
-    const topic = await client.db("myan_dev").collection("topics").insertOne({
-      userId: userIdObject,
-      topicName,
-      created_at: new Date(),
-    });
-    return res.status(200).json({ message: "Topic Created", topic });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
+  // console.log(topic);
+  if (
+    userId === null || userId === '' || userId === undefined &&
+    topicName === null || topicName === '' || topicName === undefined
+  ) {
+    return res.status(400).json({message: "Please check your inputs."});
+  } else {
+    try {
+      await client.connect();
+      const userIdObject = new ObjectId(userId);
+      const topic = await client.db("myan_dev").collection("topics").insertOne({
+        userId: userIdObject,
+        topicName,
+        created_at: new Date(),
+      });
+      return res.status(200).json({ message: "Topic Created", topic });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
   }
 });
 
 //get all topics
-app.get("/get/topics", async (req, res) => {
+app.get("/get/topics", auth, async (req, res) => {
   try {
     await client.connect();
     const topics = await client.db("myan_dev").collection("topics").aggregate([
@@ -215,8 +228,7 @@ app.get("/get/topics", async (req, res) => {
             as: "creator",
           },
         },
-      ])
-      .toArray();
+      ]).toArray();
     return res.json(topics);
   } catch (error) {
     return res.json({ error: error.message });
@@ -224,52 +236,54 @@ app.get("/get/topics", async (req, res) => {
 });
 
 //update topic
-app.put("/update/topic", async (req, res) => {
+app.put("/update/topic", auth, async (req, res) => {
   const { topicId, userId, topic: topicName } = req.body;
-  const oldTopic = await client.db("myan_dev").collection("topics").findOne({
-      _id: new ObjectId(topicId),
-  });
-  if (oldTopic) {
-    try {
-      await client.connect();
-      const userIdObject = new ObjectId(userId);
-      const updateTopic = await client.db("myan_dev").collection("topics")
-        .updateOne(
-          { _id: new ObjectId(topicId) },
-          {
-            $set: {
-              userId: userIdObject,
-              topicName: topicName,
-              updated_at: new Date(),
-            },
-          }
-        );
-      return res.json({ updateTopic, message: "Topic updated." });
-    } catch (error) {
-      return res.json({ error: error.message });
-    }
+  if (
+    userId === null || userId === '' || userId === undefined &&
+    topicId === null || topicId === '' || topicId === undefined &&
+    topicName === null || topicName === '' || topicName === undefined
+  ) {
+    return res.status(400).json({message: "Please check your inputs."});
   } else {
-    return res.status(404).json({ message: "Topic not found." });
+    await client.connect();
+    const oldTopic = await client.db("myan_dev").collection("topics").findOne({
+        _id: new ObjectId(topicId),
+    });
+    if (oldTopic) {
+      try {
+        const userIdObject = new ObjectId(userId);
+        const updateTopic = await client.db("myan_dev").collection("topics")
+          .updateOne(
+            { _id: new ObjectId(topicId) },
+            {
+              $set: {
+                userId: userIdObject,
+                topicName: topicName,
+                updated_at: new Date(),
+              },
+            }
+          );
+        return res.json({ updateTopic, message: "Topic updated." });
+      } catch (error) {
+        return res.json({ error: error.message });
+      }
+    } else {
+      return res.status(404).json({ message: "Topic not found." });
+    }
   }
 });
 
 // delete topic
-app.delete("/delete/topic", async (req, res) => {
+app.delete("/delete/topic", auth,async (req, res) => {
   await client.connect();
   const { topicId } = req.body;
-  const topic = await client
-    .db("myan_dev")
-    .collection("topics")
-    .findOne({
+  const topic = await client.db("myan_dev").collection("topics").findOne({
       _id: new ObjectId(topicId),
     });
   try {
     if (topic) {
       await client.connect();
-      await client
-        .db("myan_dev")
-        .collection("topics")
-        .deleteOne({
+      await client.db("myan_dev").collection("topics").deleteOne({
           _id: new ObjectId(topicId),
         });
       return res.status(200).json({ message: "Topic Deleted." });
@@ -281,31 +295,43 @@ app.delete("/delete/topic", async (req, res) => {
   }
 });
 
-app.post("/create/post", upload.any("post_images"), async (req, res) => {
+app.post("/create/post", upload.any("post_images"), auth,async (req, res) => {
   const { caption, userId, topicId } = req.body;
   // console.log(req.files ? "images passed" : "try again")
-  if (req.files) {
-    var postImages = req.files.map((file) => file.filename);
-  }
+  // if (req.files) {
+  //   var postImages = req.files.map((file) => file.filename);
+  // }
   // console.log('Post Images:', postImages);
-  try {
-    await client.connect();
-    const userIdObject = new ObjectId(userId);
-    const topicIdObject = new ObjectId(topicId);
-    const post = await client.db("myan_dev").collection("posts").insertOne({
-      caption,
-      userId: userIdObject,
-      topicId: topicIdObject,
-      images: postImages,
-      created_at: new Date(),
-    }).toArray();
-    return res.status(200).json(post);
-  } catch (error) {
-    return res.json({ error: error.message });
+  if (
+    userId && topicId && caption && 
+    userId !== "" && topicId !== "" && caption !== "" 
+  ) {
+    if (req.files) {
+      var postImages = req.files.map((file) => file.filename);
+    } else {
+      postImages = [];
+    }
+    try {
+      await client.connect();
+      const userIdObject = new ObjectId(userId);
+      const topicIdObject = new ObjectId(topicId);
+      const post = await client.db("myan_dev").collection("posts").insertOne({
+        caption,
+        userId: userIdObject,
+        topicId: topicIdObject,
+        images: postImages,
+        created_at: new Date(),
+      });
+      return res.status(200).json(post);
+    } catch (error) {
+      return res.json({ error: error.message });
+    }
+  } else {
+    return res.status(400).json({ message: "Please fill all fields." });
   }
 });
 
-app.get("/get/posts", async (req, res) => {
+app.get("/get/posts", auth,async (req, res) => {
   try {
     await client.connect();
     const posts = await client
@@ -335,7 +361,7 @@ app.get("/get/posts", async (req, res) => {
     return res.json({ message: error.message });
   }
 });
-app.get("/get/posts/:userId", async (req, res) => {
+app.get("/get/posts/:userId", auth,async (req, res) => {
   const userId = req.params.userId;
   try {
     await client.connect();
@@ -369,25 +395,19 @@ app.get("/get/posts/:userId", async (req, res) => {
   }
 });
 
-app.put("/update/profile", async (req, res) => {
+app.put("/update/profile", auth,async (req, res) => {
   const { userId, newName, newPosition, occupationVal } = req.body;
   // console.log(userId, ``)
   for (const i of occupationVal) {
     console.log(i);
   }
   await client.connect();
-  const user = await client
-    .db("myan_dev")
-    .collection("users")
-    .findOne({
+  const user = await client.db("myan_dev").collection("users").findOne({
       _id: new ObjectId(userId),
     });
   if (user) {
     try {
-      await client
-        .db("myan_dev")
-        .collection("users")
-        .updateOne(
+      await client.db("myan_dev").collection("users").updateOne(
           { _id: new ObjectId(userId) },
           {
             $set: {
@@ -397,10 +417,7 @@ app.put("/update/profile", async (req, res) => {
             },
           }
         );
-      const updatedUser = await client
-        .db("myan_dev")
-        .collection("users")
-        .findOne({
+      const updatedUser = await client.db("myan_dev").collection("users").findOne({
           _id: new ObjectId(userId),
         }).toArray();
       console.log(updatedUser);
@@ -413,13 +430,10 @@ app.put("/update/profile", async (req, res) => {
 });
 
 // update password
-app.put("/update/password", async (req, res) => {
+app.put("/update/password", auth,async (req, res) => {
   const { userId, oldPassword, newPassword } = req.body;
   await client.connect();
-  const user = await client
-    .db("myan_dev")
-    .collection("users")
-    .findOne({
+  const user = await client.db("myan_dev").collection("users").findOne({
       _id: new ObjectId(userId),
     });
 
