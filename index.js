@@ -11,11 +11,13 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
+app.use(express.json());
+app.use(express.text());
+app.use(express.raw());
+app.use(express.urlencoded({ extended: true }));
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 const port = process.env.PORT || 3001;
 const jwt = require("jsonwebtoken");
@@ -128,7 +130,7 @@ app.post("/login", async (req, res) => {
     email === null || email === '' || email === undefined &&
     password === null || password === '' || password === undefined
   ) {
-    return res.status(400).json({message: "Please check your inputs."});
+    return res.status(400).json({message: "Please check your inputs."}); 
   } else {
     const user = await client.db("myan_dev").collection("users").findOne({ email });
     if (user) {
@@ -172,12 +174,9 @@ app.get("/get/credentials", async (req, res) => {
     // console.log(decodedToken)
     // console.log(decodedToken._id)
     if (decodedToken) {
-      const user = await client
-        .db("myan_dev")
-        .collection("users")
-        .findOne({
-          _id: new ObjectId(decodedToken._id),
-        }).toArray();
+      const user = await client.db("myan_dev").collection("users").findOne({
+        _id: new ObjectId(decodedToken._id),
+      });
       if (user) {
         return res.status(200).json({ user });
       } else {
@@ -191,9 +190,8 @@ app.get("/get/credentials", async (req, res) => {
 });
 
 //create topic
-app.post("/create/topic", auth, async (req, res) => {
+app.post("/create/topic", auth, upload.none(),async (req, res) => {
   const { userId, topic: topicName } = req.body;
-  // console.log(topic);
   if (
     userId === null || userId === '' || userId === undefined &&
     topicName === null || topicName === '' || topicName === undefined
@@ -236,7 +234,7 @@ app.get("/get/topics", auth, async (req, res) => {
 });
 
 //update topic
-app.put("/update/topic", auth, async (req, res) => {
+app.put("/update/topic", auth, upload.none(),async (req, res) => {
   const { topicId, userId, topic: topicName } = req.body;
   if (
     userId === null || userId === '' || userId === undefined &&
@@ -313,12 +311,12 @@ app.post("/create/post", upload.any("post_images"), auth,async (req, res) => {
     }
     try {
       await client.connect();
-      const userIdObject = new ObjectId(userId);
-      const topicIdObject = new ObjectId(topicId);
+      // const userIdObject = new ObjectId(userId);
+      // const topicIdObject = new ObjectId(topicId);
       const post = await client.db("myan_dev").collection("posts").insertOne({
         caption,
-        userId: userIdObject,
-        topicId: topicIdObject,
+        userId: new ObjectId(userId),
+        topicId: new ObjectId(topicId),
         images: postImages,
         created_at: new Date(),
       });
@@ -331,68 +329,78 @@ app.post("/create/post", upload.any("post_images"), auth,async (req, res) => {
   }
 });
 
-app.put("/update/post", upload.any("post_updateImages"), auth, async (req, res) => {
+app.put("/update/post",  auth, upload.any("post_updateImages"), async (req, res) => {
   const { updatedCaption, userId, topicId, postId } = req.body;
+  console.log(req.body);
+  console.log("imgaes " + req.files.map((file) => file.filename));
+  console.log(updatedCaption);
   await client.connect();
-  const post = await client.db("myan_dev").collection("posts").findOne({
+  const oldPost = await client.db("myan_dev").collection("posts").findOne({
     _id: new ObjectId(postId)
   });
-  let oldImages = [...post.images];
-  // console.log(oldImages);
-  if (!updatedCaption || !userId || !topicId || !postId) {
-    return res.status(400).json({message: "Please check your inputs."});
-  }else{
-    try {
-      if (req.files) {
-        for (const filePath of filePathsToDelete) {
-          const oldImagesPath = `./uploads/${filePath}`;
-          if (oldImagesPath !== "./uploads/null" && oldImagesPath !== "./uploads/undefined" && fs.existsSync(oldImagesPath)) {
-            fs.unlinkSync(oldImagesPath);
+  if(oldPost){
+    // console.log(oldPost.images);
+    if (!updatedCaption || !userId || !topicId || !postId) {
+      return res.status(400).json({message: "Please check your inputs."});
+    }else{
+      try {
+        if (req.files.length > 0) {
+          let filePathsToDelete = [];
+          filePathsToDelete = oldPost.images;
+          for (const filename of filePathsToDelete) {
+            const oldImagesPath = __dirname  + `/uploads/${filename}`;
+            if (oldImagesPath) {
+              console.log("images exist. the path is " + oldImagesPath )
+              fs.unlinkSync(oldImagesPath); 
+              var postUpdateImages = req.files.map((file) => file.filename);
+              console.log(postUpdateImages)
+            }else{
+              postUpdateImages = oldPost.images;
+              // console.log("no", "Here are old images " + oldImages)
+            }
           }
-        }
-        var postUpdateImages = req.files.map((file) => file.filename);
-        const updatePost = await client.db("myan_dev").collection("posts").findOneAndUpdate(
-          { _id: new ObjectId(postId) },
-          { userId: new ObjectId(userId) },
-          { topicId: new ObjectId(topicId) },
-        {
-          $set: {
-            caption: updatedCaption,
-            images: postUpdateImages,
-            updated_at: new Date(),
-          },
-        });
-
-        // note here is the constant `updatedPost`
-        const updatedPost = await client.db("myan_dev").collection("posts").findOne({
-          _id: new ObjectId(postId)
-        });
-
-        return res.status(200).json({message: "Post updated", updatedPost})
-      } else {
-        postUpdateImages = oldImages;
-        const updatePost = await client.db("myan_dev").collection("posts").findOneAndUpdate(
-          { userId: new ObjectId(userId) },
-          { topicId: new ObjectId(topicId) },
-          { postId: new ObjectId(postId) },
+          const updatePost = await client.db("myan_dev").collection("posts").updateOne(
+            { _id: new ObjectId(postId) },
           {
             $set: {
+              userId: new ObjectId(userId),
+              topicId: new ObjectId(topicId),
               caption: updatedCaption,
               images: postUpdateImages,
               updated_at: new Date(),
             },
-          })
-        // note here is the constant `updatedPost`
-        const updatedPost = await client.db("myan_dev").collection("posts").findOne({
-          _id: new ObjectId(postId)
-        });
+          });
+  
+          // note here is the constant `updatedPost`
+          const updatedPost = await client.db("myan_dev").collection("posts").findOne({
+            _id: new ObjectId(postId)
+          });
+  
+          return res.status(200).json({message: "Post updated", updatedPost})
+        } else {
+          const updatePost = await client.db("myan_dev").collection("posts").updateOne(
+            { _id: new ObjectId(postId) },
+            {
+              $set: {
+                userId: new ObjectId(userId),
+                topicId: new ObjectId(topicId),
+                caption: updatedCaption,
+                updated_at: new Date(),
+              },
+            }
+          );
+          const updatedPost = await client.db("myan_dev").collection("posts").findOne({
+            _id: new ObjectId(postId)
+          });
 
-        return res.status(200).json({message: "Post updated", updatedPost})
+          return res.status(200).json({ message: "Post updated", updatedPost });
+        }
+      } catch (error) {
+        return res.json({ error: error.message });
       }
-    } catch (error) {
-      return res.json({ error: error.message });
     }
   }
+
 });
 
 app.get("/get/posts", auth,async (req, res) => {
@@ -422,6 +430,27 @@ app.get("/get/posts", auth,async (req, res) => {
     return res.json({ message: error.message });
   }
 });
+
+app.delete("/delete/post/:postId", auth, async (req,res) => {
+  const postId = req.params.postId;
+  try {
+    await client.connect();
+    const postToBeDeleted = await client.db("myan_dev").collection("posts").findOne({
+      _id: new ObjectId(postId)
+    });
+    if (postToBeDeleted) {
+      await client.db("myan_dev").collection("posts").deleteOne({
+        _id: new ObjectId(postId)
+      });
+      return res.status(200).json({message:"Post deleted"});
+    }else{
+      return res.status(404).json({message: "Post not Found"});
+    }
+  } catch (error) {
+    return res.json({ error: error.message });
+  }
+})
+
 app.get("/get/posts/:userId", auth,async (req, res) => {
   const userId = req.params.userId;
   try {

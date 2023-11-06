@@ -1,0 +1,81 @@
+ //express code
+      try {  
+      
+        const post = await client.db("myan_dev").collection("posts").updateOne( 
+          { _id: ObjectId(id) }, 
+            { $set: 
+              { 
+                caption: updatedCaption, 
+                userId: new ObjectId(userId), 
+                topicId: new ObjectId(topicId), 
+                images: postImages, 
+                updated_at: new Date(), 
+              }, 
+            } 
+        ); 
+        return res.status(200).json(post); 
+      } catch (error) { 
+        return res.json({ error: error.message });
+        } 
+      } else { 
+        return res.status(400).json({ message: "Please fill all fields." });
+      } 
+      
+      
+      
+      if (!updatedCaption || !userId || !topicId || !postId) {
+          return res.status(400).json({message: "Please check your inputs."});
+        }else{
+          try {
+            if (req.files) {
+              for (const filePath of filePathsToDelete) {
+                const oldImagesPath = __dirname + `/uploads/${filePath}`;
+                if (oldImagesPath !== __dirname + "/uploads/null" && oldImagesPath !== __dirname + "./uploads/undefined" && fs.existsSync(oldImagesPath)) {
+                  // fs.unlinkSync(oldImagesPath);
+                  console.log("images exist")
+                }
+                console.log("no")
+              }
+              // var postUpdateImages = req.files.map((file) => file.filename);
+              // const updatePost = await client.db("myan_dev").collection("posts").findOneAndUpdate(
+              //   { _id: new ObjectId(postId) },
+              // {
+              //   $set: {
+              //     userId: new ObjectId(userId),
+              //     topicId: new ObjectId(topicId),
+              //     caption: updatedCaption,
+              //     images: postUpdateImages,
+              //     updated_at: new Date(),
+              //   },
+              // });
+      
+              // // note here is the constant `updatedPost`
+              // const updatedPost = await client.db("myan_dev").collection("posts").findOne({
+              //   _id: new ObjectId(postId)
+              // });
+      
+              // return res.status(200).json({message: "Post updated", updatedPost})
+            } else {
+              // postUpdateImages = oldImages;
+              // const updatePost = await client.db("myan_dev").collection("posts").findOneAndUpdate(
+              //   { postId: new ObjectId(postId) },
+              //   {
+              //     $set: {
+              //       userId: new ObjectId(userId),
+              //       topicId: new ObjectId(topicId),
+              //       caption: updatedCaption,
+              //       images: postUpdateImages,
+              //       updated_at: new Date(),
+              //     },
+              //   })
+              // // note here is the constant `updatedPost`
+              // const updatedPost = await client.db("myan_dev").collection("posts").findOne({
+              //   _id: new ObjectId(postId)
+              // });
+      
+              // return res.status(200).json({message: "Post updated", updatedPost})
+            }
+          } catch (error) {
+            return res.json({ error: error.message });
+          }
+        }
