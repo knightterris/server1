@@ -79,3 +79,45 @@
             return res.json({ error: error.message });
           }
         }
+
+
+        app.post("/create/topic", auth, upload.none(), async (req, res) => {
+  const { userId, topic: topicName } = req.body;
+
+  if (!userId || !topicName) {
+    return res.status(400).json({ message: "Please check your inputs." });
+  } else {
+    try {
+      await client.connect();
+      const userIdObject = new ObjectId(userId);
+
+      // Check the number of topics the user has created
+      const user = await client.db("myan_dev").collection("users").findOne({
+        _id: userIdObject
+      });
+
+      if (user && user.topicCount && user.topicCount >= 3) {
+        return res.status(400).json({ message: "User can only create 3 topics." });
+      }
+
+      // Update user's topicCount
+      await client.db("myan_dev").collection("users").updateOne(
+        { _id: userIdObject },
+        {
+          $inc: { topicCount: 1 }
+        }
+      );
+
+      // Create the topic
+      const topic = await client.db("myan_dev").collection("topics").insertOne({
+        userId: userIdObject,
+        topicName,
+        created_at: new Date(),
+      });
+
+      return res.status(200).json({ message: "Topic Created", topic });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
+});

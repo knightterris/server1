@@ -200,13 +200,30 @@ app.post("/create/topic", auth, upload.none(),async (req, res) => {
   } else {
     try {
       await client.connect();
-      const userIdObject = new ObjectId(userId);
-      const topic = await client.db("myan_dev").collection("topics").insertOne({
-        userId: userIdObject,
-        topicName,
-        created_at: new Date(),
+      const userTopicCount = await client.db("myan_dev").collection("topics").countDocuments({
+        userId: new ObjectId(userId),
       });
-      return res.status(200).json({ message: "Topic Created", topic });
+      // console.log("This is the current topic count that user _id " + userId + " created -> " + userTopicCount)
+      if(userTopicCount && userTopicCount < 5){
+        const topic = await client.db("myan_dev").collection("topics").insertOne({
+          userId: userIdObject,
+          topicName,
+          created_at: new Date(),
+        });
+        return res.status(200).json({ message: "Topic Created", topic });
+      }else if(userTopicCount && userTopicCount === 5){
+        return res.status(403).json({message:"You can't create more than 5 topics"})
+      }else{
+        return res.status(406).json({message:'Something went wrong!'})
+      }
+      // await client.db("myan_dev").collection("users").updateOne(
+      //   { _id: userIdObject },
+      //   {
+      //     $set:{
+      //       topicCount:
+      //     }
+      //   }
+      // );
     } catch (error) {
       return res.status(500).json({ error: error.message });
     }
