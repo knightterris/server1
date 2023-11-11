@@ -190,31 +190,76 @@ app.get("/get/credentials", async (req, res) => {
 });
 
 //create topic
-app.post("/create/topic", auth, upload.none(),async (req, res) => {
+app.post("/create/topic", auth, upload.none(), async (req, res) => {
   const { userId, topic: topicName } = req.body;
   if (
-    userId === null || userId === '' || userId === undefined &&
-    topicName === null || topicName === '' || topicName === undefined
+    userId === null ||
+    userId === "" ||
+    (userId === undefined && topicName === null) ||
+    topicName === "" ||
+    topicName === undefined
   ) {
-    return res.status(400).json({message: "Please check your inputs."});
+    return res.status(400).json({ message: "Please check your inputs." });
   } else {
     try {
       await client.connect();
-      const userTopicCount = await client.db("myan_dev").collection("topics").countDocuments({
-        userId: new ObjectId(userId),
-      });
-      // console.log("This is the current topic count that user _id " + userId + " created -> " + userTopicCount)
-      if(userTopicCount && userTopicCount < 5){
-        const topic = await client.db("myan_dev").collection("topics").insertOne({
-          userId: userIdObject,
-          topicName,
-          created_at: new Date(),
+      const userTopicCount = await client
+        .db("myan_dev")
+        .collection("topics")
+        .countDocuments({
+          userId: new ObjectId(userId),
         });
-        return res.status(200).json({ message: "Topic Created", topic });
-      }else if(userTopicCount && userTopicCount === 5){
-        return res.status(403).json({message:"You can't create more than 5 topics"})
-      }else{
-        return res.status(406).json({message:'Something went wrong!'})
+
+      console.log(
+        "This is the current topic count that user _id " +
+          userId +
+          " created -> " +
+          userTopicCount +
+          " topics."
+      );
+      if (userTopicCount === 0 || (userTopicCount > 0 && userTopicCount < 5)) {
+        const topic = await client
+          .db("myan_dev")
+          .collection("topics")
+          .insertOne({
+            userId: new ObjectId(userId),
+            topicName,
+            created_at: new Date(),
+          });
+
+        const userCreatedTopicCount = await client
+          .db("myan_dev")
+          .collection("topics")
+          .countDocuments({
+            userId: new ObjectId(userId),
+          });
+
+        const leftTopicCount = 5 - parseInt(userCreatedTopicCount);
+        console.log(leftTopicCount);
+        return res.status(200).json({
+          message: "Topic Created! Topic counts : " + leftTopicCount + " left!",
+          topic,
+        });
+      } else if (
+        userTopicCount === 0 ||
+        (userTopicCount > 0 && userTopicCount === 5)
+      ) {
+        return res.status(403).json({
+          message:
+            "You can't create more than 5 topics.May be you have created more than 5 topics!",
+        });
+      } else if (
+        userTopicCount === 0 ||
+        (userTopicCount > 0 && userTopicCount > 5)
+      ) {
+        return res
+          .status(403)
+          .json({ message: "You can't create more than 5 topics" });
+      } else {
+        return res.status(406).json({
+          message:
+            "Something went wrong! May be you have created more than 5 topics!",
+        });
       }
       // await client.db("myan_dev").collection("users").updateOne(
       //   { _id: userIdObject },
