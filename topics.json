@@ -1,142 +1,107 @@
 [
         {
-            "userId": "user_id_1",
             "topic": "HTML"
         },
         {
-            "userId": "user_id_2",
             "topic": "CSS"
         },
         {
-            "userId": "user_id_3",
             "topic": "Bootstrap"
         },
         {
-            "userId": "user_id_3",
             "topic": "Tailwind CSS"
         },
         {
-            "userId": "user_id_3",
             "topic": "JavaScript"
         },
         {
-            "userId": "user_id_3",
             "topic": "Vue JS"
         },
         {
-            "userId": "user_id_3",
             "topic": "React JS"
         },
         {
-            "userId": "user_id_3",
             "topic": "Vanilla JS"
         },
         {
-            "userId": "user_id_3",
             "topic": "Angular JS"
         },
         {
-            "userId": "user_id_3",
             "topic": "Node Js"
         },
         {
-            "userId": "user_id_3",
             "topic": "Express Js"
         },
         {
-            "userId": "user_id_3",
             "topic": "PHP"
         },
         {
-            "userId": "user_id_3",
             "topic": "Laravel"
         },
         {
-            "userId": "user_id_3",
             "topic": "Python"
         },
         {
-            "userId": "user_id_3",
             "topic": "Java"
         },
         {
-            "userId": "user_id_3",
             "topic": "Kotlin"
         },
         {
-            "userId": "user_id_3",
             "topic": "Flutter"
         },
         {
-            "userId": "user_id_3",
             "topic": "React Native"
         },
         {
-            "userId": "user_id_3",
             "topic": "Spring Boot"
         },
         {
-            "userId": "user_id_3",
             "topic": "PHP"
         },
         {
-            "userId": "user_id_3",
             "topic": "Livewire"
         },
         {
-            "userId": "user_id_3",
             "topic": "Linux"
         },
         {
-            "userId": "user_id_3",
             "topic": "Alpine JS"
         },
         {
-            "userId": "user_id_3",
             "topic": "Redux"
         },
         {
-            "userId": "user_id_3",
             "topic": "Next JS"
         },
         {
-            "userId": "user_id_3",
             "topic": "Nuxt JS"
         },
         {
-            "userId": "user_id_3",
             "topic": "C"
         },
         {
-            "userId": "user_id_3",
             "topic": "C#"
         },
         {
-            "userId": "user_id_3",
             "topic": "C++"
         },
         {
-            "userId": "user_id_3",
             "topic": "My SQL"
         },
         {
-            "userId": "user_id_3",
             "topic": "SQL"
         },
         {
-            "userId": "user_id_3",
             "topic": "Mongo DB"
         },
         {
-            "userId": "user_id_3",
             "topic": "Oracle"
         },
         {
-            "userId": "user_id_3",
             "topic": "PostgreSQL"
         },
         {
-            "userId": "user_id_3",
             "topic": "MariaDB"
         }
 ]
