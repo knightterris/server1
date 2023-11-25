@@ -506,40 +506,151 @@ app.get("/get/posts/:userId", auth,async (req, res) => {
   }
 });
 
-app.put("/update/profile", auth,async (req, res) => {
-  const { userId, newName, newPosition, occupationVal } = req.body;
-  // console.log(userId, ``)
-  for (const i of occupationVal) {
-    console.log(i);
+app.put("/update/profile/:userId", auth, upload.single("new_profile_img"), async (req, res) => {
+    const { newName } = req.body;
+    const { userId } = req.params;
+    var imageStatus = req.file ? true : false;
+    // console.log("New Profile image name from mongodb is " + newProfileImg);
+    await client.connect();
+    const user = await client
+    .db("myan_dev")
+    .collection("users")
+    .findOne({
+      _id: new ObjectId(userId),
+    });
+    const oldImg = user.profileImage;
+    const newProfileImg = req.file ? req.file.filename : oldImg;
+    const oldName = user.name;
+    if(imageStatus){
+      const oldImagePath = __dirname + `/uploads/${oldImg}`;
+      if(oldImagePath != __dirname + `/uploads/null.png`){
+        fs.unlinkSync(oldImagePath);
+      }
+    }
+    const nameToBeUpdated = newName ? newName : oldName;
+    const imgToBeUpdated = newProfileImg ? newProfileImg : oldImg;
+    
+    if (user) {
+      await client.db("myan_dev").collection("users").updateOne(
+        {_id: new ObjectId(userId)},
+        {
+          $set:{
+            name: nameToBeUpdated,
+            profileImage: imgToBeUpdated,
+            updated_at: new Date(),
+          }
+        }
+      );
+    const updatedProfile = await client
+    .db("myan_dev")
+    .collection("users")
+    .findOne({
+      _id: new ObjectId(userId),
+    });
+      return res.status(200).json({msg:"Your Profile has been updated.", updatedProfile});
+    } else {
+      return res.status(404).json({ msg: "User Not Found!" });
+    }
+});
+
+//update profile/ bio
+app.put("/update/bio/:userId", upload.none(), auth, async (req, res) => {
+  const { userId } = req.params;
+  if (req.body.position && req.body.position != undefined && req.body.position != "" &&
+  req.body.company && req.body.company != undefined && req.body.company != "" 
+  ) {
+    var  position  = req.body.position;
+    var  company  = req.body.company;
+  } else {
+    return res.status(406).json({msg: "Please check your inputs."});
   }
   await client.connect();
   const user = await client.db("myan_dev").collection("users").findOne({
-      _id: new ObjectId(userId),
-    });
+    _id: new ObjectId(userId)
+  });
+  var bio = position + " at " + company;
   if (user) {
     try {
       await client.db("myan_dev").collection("users").updateOne(
-          { _id: new ObjectId(userId) },
-          {
-            $set: {
-              name: newName,
-              position: newPosition,
-              occupations: occupationVal,
-            },
+        { _id: new ObjectId(userId) },
+        {
+          $set:{
+            position: position,
+            company: company,
+            bio: bio,
+            updated_at: new Date(), 
           }
-        );
-      const updatedUser = await client.db("myan_dev").collection("users").findOne({
-          _id: new ObjectId(userId),
-        }).toArray();
-      console.log(updatedUser);
-      return res.status(200).json({ updatedUser });
+        }
+      );
+      const updatedProfile = await client.db("myan_dev").collection("users").findOne({
+        _id: new ObjectId(userId),
+      });
+      return res.status(200).json({updatedProfile});
     } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({error: error.message});
     }
+  } else {
+    return res.status(404).json({msg:"User Not Found."});
   }
 });
 
+app.put("/update/jobs/:userId", upload.none(), auth, async (req, res) =>{
+  const {userId} = req.params;
+  var {position,company} = req.body;
+  // var {company} = req.body.company;
+  console.log(userId, position, company);
+  await client.connect();
+  const user = await client.db("myan_dev").collection("users").findOne({
+    _id: new ObjectId(userId)
+  });
+  user.jobs = user.jobs || [];
+  if (user) {
+    if (userId && userId != undefined && userId != "" &&
+    position && position != undefined && position != "" &&
+    company && company != undefined && company != "" ) {
+      await client.db("myan_dev").collection("users").updateOne(
+        {_id: new ObjectId(userId)},
+        {
+          $push:{
+            jobs:{
+              "position": position,
+              "company": company,
+            }
+          }
+        }
+      );
+      const updatedProfile = await client.db("myan_dev").collection("users").findOne({
+        _id: new ObjectId(userId),
+      })
+      return res.status(200).json({updatedProfile});
+    } else {
+      return res.status(406).json({msg:"Please check your inputs."})
+    }
+  } else {
+    return res.status(404).json({msg:"User not found!"});
+  }
+});
+
+app.delete("/remove/job/:userId",upload.none(), auth, async (req, res) => {
+  const {userId} = req.params;
+  const {position, company} = req.body;
+  await client.connect();
+  const user = await client.db("myan_dev").collection("users").findOne({
+    _id: new ObjectId(userId)
+  });
+  if(user){
+    var oldJobs = user.jobs || [];
+    // return res.json(oldJobs);
+    async function checkJobs(job) {
+      return job.position === position && job.company === company;
+    }
+    return res.json(oldJobs.find(checkJobs));
+    
+    // console.log(inventory.find(isCherries));
+  }else{
+    return res.status(404).json({msg: "User Not Found!"});
+  }
+});
 // update password
 app.put("/update/password", auth,async (req, res) => {
   const { userId, oldPassword, newPassword } = req.body;
@@ -844,7 +955,32 @@ app.put("/toggle/like", async(req, res) => {
     console.log(error);
     return res.status(500).json({ error: error.message }); 
   }
-})
+});
+
+app.post("/share/post/:postId/:userId", upload.none(), async (req, res) => {
+  const { userId, postId } = req.params;
+  const { shareCaption } = req.body;
+
+  try {
+    if (userId && postId) {
+      if (shareCaption) {
+        console.log("You are passing with full requirements");
+      } else {
+        console.log("You are passing without caption");
+      }
+  
+      console.log("userId - ", userId);
+      console.log("postId - ", postId);
+      console.log("shareCaption - ", shareCaption || "No caption provided");
+    } else {
+      return res.json({ message: "Something went wrong." });
+    }
+  } catch (error) {
+    console.log(error)
+    return res.json(error)
+  }
+});
+
 app.get("/test", async (req, res) => {
   return res.json({ message: "App is working." });
 });
