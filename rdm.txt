@@ -121,3 +121,8 @@
     }
   }
 });
+
+    async function checkJobs(job) {
+      return job.position === position && job.company === company;
+    }
+    return res.json(oldJobs.find(checkJobs));

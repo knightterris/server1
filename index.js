@@ -640,13 +640,25 @@ app.delete("/remove/job/:userId",upload.none(), auth, async (req, res) => {
   });
   if(user){
     var oldJobs = user.jobs || [];
-    // return res.json(oldJobs);
-    async function checkJobs(job) {
-      return job.position === position && job.company === company;
+    if (oldJobs != []) {
+      const filteredJobs = oldJobs.filter(
+        (job) => job.position !== position || job.company !== company
+      );
+      await client.db("myan_dev").collection("users").updateOne(
+        {_id: new ObjectId(userId)},
+        {
+          $set:{
+            jobs: filteredJobs
+          }
+        }
+      );
+      const updatedProfile = await client.db("myan_dev").collection("users").findOne({
+        _id: new ObjectId(userId),
+      });
+      return res.status(200).json({updatedProfile});
+    } else {
+      return res.status(500).json({msg:"Something went wrong."});
     }
-    return res.json(oldJobs.find(checkJobs));
-    
-    // console.log(inventory.find(isCherries));
   }else{
     return res.status(404).json({msg: "User Not Found!"});
   }
@@ -686,9 +698,9 @@ app.put("/update/password", auth,async (req, res) => {
 });
 
 // delete profile or delete account
-app.delete("/delete/profile", async (req, res) => {
+app.delete("/delete/profile/:userId",auth, async (req, res) => {
   try {
-    const { userId } = req.body;
+    const { userId } = req.params;
     await client.connect();
     const user = await client.db("myan_dev").collection("users").findOne({
       _id: new ObjectId(userId),
