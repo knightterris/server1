@@ -663,6 +663,40 @@ app.delete("/remove/job/:userId",upload.none(), auth, async (req, res) => {
     return res.status(404).json({msg: "User Not Found!"});
   }
 });
+
+
+app.put("/forget/password/:userId", upload.none(), auth, async (req, res) => {
+  const {userId} = req.params;
+  const {securityKey} = req.body;
+  let securityStatus ;
+  await client.connect();
+  const user = await client.db("myan_dev").collection("users").findOne({
+    _id: new ObjectId(userId)
+  });
+  if(user){
+    const oldSecurityKey =  user.security_key;
+    if(securityKey && securityKey != "" && securityKey != undefined){
+      if(securityKey === oldSecurityKey){
+        securityStatus = true;
+        await client.db("myan_dev").collection("users").updateOne(
+          { _id: new ObjectId(userId)},
+          {
+            $set:{
+              forgot_password: securityStatus
+            }
+          }
+        );
+        return res.status(200).json(true);
+      }
+      return res.status(400).json(false);
+    }else{
+      return res.status(400).json({msg: "Something's wrong with security key."});
+    }
+  }else{
+    return res.status(404).json({msg: "User Not Found"});
+  }
+});
+
 // update password
 app.put("/update/password", auth,async (req, res) => {
   const { userId, oldPassword, newPassword } = req.body;
