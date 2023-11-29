@@ -697,6 +697,51 @@ app.put("/forget/password/:userId", upload.none(), auth, async (req, res) => {
   }
 });
 
+app.put("/change/password/:userId", upload.none(), auth, async (req, res) => {
+  const {userId} = req.params;
+  const { newPassword, confirmPassword } = req.body;
+  await client.connect();
+  const user = await client
+    .db("myan_dev")
+    .collection("users")
+    .findOne({
+      _id: new ObjectId(userId),
+    });
+
+  if (user) {
+    if(confirmPassword === newPassword){
+      const valid = user.forgot_password;
+      if (valid == true) {
+        try {
+          const hashPassword = await bcrypt.hash(newPassword, 10);
+          await client
+            .db("myan_dev")
+            .collection("users")
+            .updateOne(
+              { _id: new ObjectId(userId) },
+              {
+                $set: {
+                  password: hashPassword,
+                  updated_at: new Date(),
+                },
+              }
+            );
+          return res.status(200).json({ message: "Password has been changed." });
+        } catch (error) {
+          console.log(error);
+          return res.status(500).json({ error: error.message });
+        }
+      }else{
+        return res.status(400).json({msg:"Something went wrong!"});
+      }
+    }else{
+      return res.status(400).json({msg: "Passwords do not match!"});
+    }
+  }else{
+    return res.status(404).json({msg: "User not Found!"});
+  }
+
+});
 // update password
 app.put("/update/password", auth,async (req, res) => {
   const { userId, oldPassword, newPassword } = req.body;
