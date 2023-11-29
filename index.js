@@ -91,6 +91,17 @@ function auth(req, res, next) {
   }
 }
 
+function makeSecurityKey(length) {
+  let result = '';
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789*@#$_';
+  const charactersLength = characters.length;
+  let counter = 0;
+  while (counter < length) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    counter += 1;
+  }
+  return result;
+}
 //register
 app.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
@@ -113,6 +124,7 @@ app.post("/register", async (req, res) => {
           email,
           password: hashPassword,
           created_at: new Date(),
+          profileImage: "null.png",
         });
         res.status(200).json({ user, message: "User inserted." });
       }
@@ -127,28 +139,38 @@ app.post("/login", async (req, res) => {
   await client.connect();
   const { email, password } = req.body;
   if (
-    email === null || email === '' || email === undefined &&
-    password === null || password === '' || password === undefined
+    email === null ||
+    email === "" ||
+    (email === undefined && password === null) ||
+    password === "" ||
+    password === undefined
   ) {
-    return res.status(400).json({message: "Please check your inputs."}); 
+    return res.status(400).json({ message: "Please check your inputs." });
   } else {
-    const user = await client.db("myan_dev").collection("users").findOne({ email });
+    const user = await client
+      .db("myan_dev")
+      .collection("users")
+      .findOne({ email });
     if (user) {
       try {
         const valid = await bcrypt.compare(password, user.password);
         if (valid) {
-          const userData = {
-            id: user._id,
-            email: user.email,
-            name: user.name,
-          };
           const token = jwt.sign(user, secret);
-          await client.db("myan_dev").collection("users").updateOne(
+          const securityKey = makeSecurityKey(300);
+          await client
+            .db("myan_dev")
+            .collection("users")
+            .updateOne(
               { email: email },
-              { $set: { token: token, updated_at: new Date() } }
-            );
-          // console.log(token)
-          return res.status(200).send(token);
+              { $set: { 
+                token: token, 
+                security_key: securityKey,
+                updated_at: new Date(),
+                forgot_password: false,
+              } 
+            });
+          return res.status(200).json({token: token , security_key: securityKey});
+          // return res.status(200).send(token);
         } else {
           return res
             .status(400)
@@ -164,7 +186,6 @@ app.post("/login", async (req, res) => {
     }
   }
 });
-
 //get credentials
 app.get("/get/credentials", async (req, res) => {
   const token = req.headers.authorization;
