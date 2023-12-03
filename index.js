@@ -103,7 +103,7 @@ function makeSecurityKey(length) {
   return result;
 }
 //register
-app.post("/register", async (req, res) => {
+app.post("/register", upload.none(), async (req, res) => {
   const { name, email, password } = req.body;
   if (
     name === null || name === '' || name === undefined &&
@@ -135,7 +135,7 @@ app.post("/register", async (req, res) => {
 });
 
 //login
-app.post("/login", async (req, res) => {
+app.post("/login",upload.none(), async (req, res) => {
   await client.connect();
   const { email, password } = req.body;
   if (
@@ -314,7 +314,7 @@ app.put("/update/topic", auth, upload.none(),async (req, res) => {
 });
 
 // delete topic
-app.delete("/delete/topic", auth,async (req, res) => {
+app.delete("/delete/topic", auth,upload.none(),async (req, res) => {
   await client.connect();
   const { topicId } = req.body;
   const topic = await client.db("myan_dev").collection("topics").findOne({
@@ -473,7 +473,7 @@ app.get("/get/posts", auth,async (req, res) => {
   }
 });
 
-app.delete("/delete/post/:postId", auth, async (req,res) => {
+app.delete("/delete/post/:postId", upload.none(), auth, async (req,res) => {
   const postId = req.params.postId;
   try {
     await client.connect();
@@ -821,7 +821,7 @@ app.delete("/delete/profile/:userId",auth, async (req, res) => {
 });
 
 // create save post
-app.post("/save/post", async(req, res) => {
+app.post("/save/post", auth, upload.none(), async(req, res) => {
   const { postId, userId, topicId } = req.body;
   try {
     await client.connect();
@@ -838,7 +838,7 @@ app.post("/save/post", async(req, res) => {
   }
 });
 
-app.get("/get/savedPosts", async(req, res) => {
+app.get("/get/savedPosts", auth, async(req, res) => {
   const { userId } = req.body;
   try {
     await client.connect();
@@ -884,7 +884,7 @@ app.get("/get/savedPosts", async(req, res) => {
   }
 });
 
-app.delete("/unsave/post", async(req, res) => {
+app.delete("/unsave/post", auth, upload.none(), async(req, res) => {
   const { savedPostId } = req.body;
   try {
     await client.connect();
@@ -898,7 +898,7 @@ app.delete("/unsave/post", async(req, res) => {
   }
 });
 
-app.post("/post/comment",upload.any("comment_images"), async (req, res) => {
+app.post("/post/comment",auth, upload.any("comment_images"), async (req, res) => {
   const { userId, postId, comment } = req.body; 
   // if (req.files) {
   //   var postImages = req.files.map((file) => file.filename);
@@ -919,7 +919,7 @@ app.post("/post/comment",upload.any("comment_images"), async (req, res) => {
   }
 });
 
-app.get("/get/post/comment", async(req, res) => {
+app.get("/get/post/comment", auth,async(req, res) => {
   const { userId, postId } = req.body;
   try {
     await client.connect();
@@ -951,7 +951,7 @@ app.get("/get/post/comment", async(req, res) => {
   }
 });
 
-app.put("/update/comment", upload.any("comment_updateImg"), async(req, res) => {
+app.put("/update/comment", auth,upload.any("comment_updateImg"), async(req, res) => {
   const { userId, postId, commentId, newComment } = req.body;
   // if (req.files) {
   //   var postImages = req.files.map((file) => file.filename);
@@ -990,7 +990,7 @@ app.put("/update/comment", upload.any("comment_updateImg"), async(req, res) => {
   }
 });
 
-app.delete("delete/comment", async(req,res) => {
+app.delete("delete/comment",auth, upload.none(), async(req,res) => {
   const { commentId } = req.body;
   try {
     await client.connect();
@@ -1015,7 +1015,7 @@ app.delete("delete/comment", async(req,res) => {
 });
 
 //toggle like to post and comments(toggle like function need to be refactored)
-app.put("/toggle/like", async(req, res) => {
+app.put("/toggle/like",auth, upload.none(), async(req, res) => {
   const { postId, commentId, userId, event } = req.body;
   try {
     await client.connect();
